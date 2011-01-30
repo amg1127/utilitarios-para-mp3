@@ -1,0 +1,11 @@
+#!/bin/bash
+echo -n "Qualidade: "
+read qualidade
+exitcode=0
+while [ "$1" ]; do
+    ( mpg123 --wav /dev/stdout "$1" | lame -b "$qualidade" - "${1}-${qualidade}kbps.mp3" ) || (exitcode=1)
+    shift
+done
+echo -e '\nConcluido.'
+exit $exitcode
+
