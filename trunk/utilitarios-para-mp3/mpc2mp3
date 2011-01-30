@@ -1,0 +1,9 @@
+#!/bin/bash
+exitcode=0
+while [ "$1" ]; do
+    ( mpc123 --wav /dev/stdout "$1" | lame -b 256 - "`dirname \"$1\"`/`basename \"$1\" '.mpc'`.mp3" ) || (exitcode=1)
+    shift
+done
+echo -e '\nConcluido.'
+exit $exitcode
+

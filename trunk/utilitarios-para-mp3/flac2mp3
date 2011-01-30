@@ -1,0 +1,9 @@
+#!/bin/bash
+exitcode=0
+while [ "$1" ]; do
+    ( flac -d -c "$1" | lame -b 256 - "`dirname \"$1\"`/`basename \"$1\" '.flac'`.mp3" ) || (exitcode=1)
+    shift
+done
+echo -e '\nConcluido.'
+exit $exitcode
+

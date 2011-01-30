@@ -1,0 +1,85 @@
+#!/bin/bash
+
+if ! [ -b "$1" ]; then
+    echo "Uso: $0 <dispositivo>"
+    exit 1
+fi
+
+unset IFS
+
+pidback=""
+
+while true; do
+    if ! eject "$1"; then
+        exit 1
+    fi
+    echo "Insira um CD no drive '$1'."
+    echo -n "Pressione ENTER quando estiver pronto ou digite algo e ENTER para sair."
+    read
+    if [ "$REPLY" ]; then
+        break
+    fi
+    eject -t "$1"
+    if ! cdparanoia -d "$1" -Q; then
+        echo "Erro lendo CD-ROM. Nao e possivel continuar."
+        continue
+    fi
+    while true; do
+        echo -n "Digite um nome para o CD: "
+        read pasta
+        pasta="./$pasta"
+        while [ -e "$pasta" ]; do
+            echo "Aviso: ja existe um CD com esse nome."
+            echo -n "Deseja continuar (S/N)? "
+            read resp
+            if echo $resp | egrep -i ^[sy] > /dev/null 2>&1; then
+                break
+            fi
+            echo -n "Digite um nome para o CD: "
+            read pasta
+            pasta="./$pasta"
+        done
+        if [ -d "$pasta" ] || mkdir -v "$pasta"; then
+            break
+        fi
+        echo "Nome de CD invalido."
+    done
+    cd "$pasta"
+    faixa=0
+    while true; do
+        faixa=$((faixa+1))
+        fx="`echo -n \"0$faixa\" | tail -c2`"
+        arq="track_$fx"
+        if [ -e "$arq.mp3" ]; then
+            echo "Pulando faixa '$faixa', porque ela ja foi copiada."
+        else
+            echo -n "Extraindo faixa '$faixa'..."
+            cdparanoia --quiet -w -d "$1" "$faixa" '-' > "$arq.wav"
+            if (! [ -s "$arq.wav" ]) || ([ `stat -c %s "$arq.wav"` -lt 10240 ]); then
+                echo " Abortado. Parece que o CD acabou."
+                rm -fv "$arq.wav"
+                break
+            fi
+            ( lame --quiet -b 256 "$arq.wav" "$arq.mp3" ; rm -f "$arq.wav" ) & true
+            pidback="$pidback $!"
+            renice 19 $! > /dev/null
+            echo " OK"
+        fi
+    done
+    cd ..
+done
+
+echo -n "Esperando o termino das tarefas lancadas em segundo plano..."
+while true; do
+    tem=0
+    for p in $pidback; do
+        if [ -e /proc/$p ]; then
+            tem=1
+        fi
+    done
+    if [ $tem -eq 0 ]; then
+        break
+    fi
+done
+
+echo ' OK'
