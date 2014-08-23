@@ -6,7 +6,7 @@ fi
 fs="$1"
 shift
 freespc=$((`stat -f -c '%a*%S' "$fs"`))
-usedspc="`du -bc \"$@\" | tail --lines=1 | awk '{ print $1; }'`"
+usedspc="`du -bcL \"$@\" | tail --lines=1 | awk '{ print $1; }'`"
 echo ' **** Espaco disponivel: ****'
 resp=$((freespc-usedspc))
 echo $resp bytes
